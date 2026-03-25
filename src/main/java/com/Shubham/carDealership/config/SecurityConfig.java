@@ -30,7 +30,15 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/api/cars/all", "/api/cars/search", "/ws/**").permitAll()
+                        // Public endpoints — no token needed
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/api/cars/all",
+                                "/api/cars/search",
+                                "/api/cars/{id}",
+                                "/ws/**"
+                        ).permitAll()
+                        // Everything else requires a valid JWT
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -44,7 +52,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://localhost:3000"));
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:5173",
+                "http://localhost:3000"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

@@ -199,15 +199,17 @@ public class CarController {
         }
     }
 
+    // UPDATED: Search endpoint with keyword parameter
     @GetMapping("/search")
     public ResponseEntity<?> searchCars(
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String make,
             @RequestParam(required = false) String bodyType,
             @RequestParam(required = false) String fuel,
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(required = false) String carSource) {
 
-        List<CarResponse> cars = carService.searchCars(make, bodyType, fuel, maxPrice, carSource);
+        List<CarResponse> cars = carService.searchCars(keyword, make, bodyType, fuel, maxPrice, carSource);
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("cars", cars);

@@ -102,8 +102,39 @@ public class CarService {
         return mapToResponse(car);
     }
 
-    public List<CarResponse> searchCars(String make, String bodyType, String fuel, Double maxPrice, String carSource) {
-        return carRepository.searchCars(make, bodyType, fuel, maxPrice, carSource).stream()
+    // UPDATED: Search method with keyword parameter
+    public List<CarResponse> searchCars(String keyword, String make, String bodyType, String fuel, Double maxPrice, String carSource) {
+        return carRepository.findAll().stream()
+                .filter(car -> {
+                    // Status filter
+                    if (!"AVAILABLE".equals(car.getStatus())) return false;
+
+                    // Source filter
+                    if (carSource != null && !carSource.isEmpty() && !carSource.equals(car.getCarSource())) return false;
+
+                    // Make filter
+                    if (make != null && !make.isEmpty() && !make.equals(car.getMake())) return false;
+
+                    // Body type filter
+                    if (bodyType != null && !bodyType.isEmpty() && !bodyType.equals(car.getBodyType())) return false;
+
+                    // Fuel filter
+                    if (fuel != null && !fuel.isEmpty() && !fuel.equals(car.getFuel())) return false;
+
+                    // Price filter
+                    if (maxPrice != null && car.getPrice().doubleValue() > maxPrice) return false;
+
+                    // KEYWORD SEARCH - Search ANY car (make, model, year, description)
+                    if (keyword != null && !keyword.isEmpty()) {
+                        String searchLower = keyword.toLowerCase();
+                        return car.getMake().toLowerCase().contains(searchLower) ||
+                                car.getModel().toLowerCase().contains(searchLower) ||
+                                car.getYear().toString().contains(searchLower) ||
+                                (car.getDescription() != null && car.getDescription().toLowerCase().contains(searchLower));
+                    }
+
+                    return true;
+                })
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

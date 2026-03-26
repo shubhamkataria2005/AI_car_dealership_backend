@@ -36,6 +36,7 @@ public class SecurityConfig {
                                 "/api/cars/all",
                                 "/api/cars/search",
                                 "/api/cars/{id}",
+                                "/api/ai-assistant/chat",
                                 "/ws/**"
                         ).permitAll()
                         // Everything else requires a valid JWT

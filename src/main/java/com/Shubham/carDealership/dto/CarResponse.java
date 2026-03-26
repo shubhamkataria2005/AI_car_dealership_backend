@@ -1,3 +1,4 @@
+// src/main/java/com/Shubham/carDealership/dto/CarResponse.java
 package com.Shubham.carDealership.dto;
 
 import lombok.Data;
@@ -22,4 +23,10 @@ public class CarResponse {
     private String sellerEmail;
     private String status;
     private LocalDateTime createdAt;
+
+    // New fields for hybrid system
+    private String carSource;
+    private String stockNumber;
+    private Boolean isCompanyOwned;
+    private String inspectionStatus;
 }

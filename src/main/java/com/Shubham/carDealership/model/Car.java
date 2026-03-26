@@ -1,3 +1,4 @@
+// src/main/java/com/Shubham/carDealership/model/Car.java
 package com.Shubham.carDealership.model;
 
 import jakarta.persistence.*;
@@ -56,4 +57,23 @@ public class Car {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    // NEW FIELDS FOR HYBRID SYSTEM
+    @Column(name = "car_source")
+    private String carSource = "MARKETPLACE"; // MARKETPLACE or DEALERSHIP
+
+    @Column(name = "stock_number")
+    private String stockNumber;
+
+    @Column(name = "is_company_owned")
+    private Boolean isCompanyOwned = false;
+
+    @Column(name = "inspection_status")
+    private String inspectionStatus = "PENDING"; // PENDING, PASSED, FAILED
+
+    @Column(name = "sales_employee_id")
+    private Long salesEmployeeId;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt = LocalDateTime.now();
 }

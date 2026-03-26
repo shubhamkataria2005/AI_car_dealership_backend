@@ -1,3 +1,4 @@
+// src/main/java/com/Shubham/carDealership/controller/AdminController.java
 package com.Shubham.carDealership.controller;
 
 import com.Shubham.carDealership.config.JwtUtil;
@@ -75,6 +76,7 @@ public class AdminController {
 
         // Count users by role
         stats.put("regularUsers", allUsers.stream().filter(u -> "USER".equals(u.getRole())).count());
+        stats.put("salesEmployees", allUsers.stream().filter(u -> "SALES_EMPLOYEE".equals(u.getRole())).count());
         stats.put("admins", allUsers.stream().filter(u -> "ADMIN".equals(u.getRole())).count());
         stats.put("superAdmins", allUsers.stream().filter(u -> "SUPER_ADMIN".equals(u.getRole())).count());
 
@@ -133,7 +135,8 @@ public class AdminController {
         }
 
         String newRole = payload.get("role");
-        if (!List.of("USER", "ADMIN", "SUPER_ADMIN").contains(newRole)) {
+        // UPDATED: Added SALES_EMPLOYEE to allowed roles
+        if (!List.of("USER", "ADMIN", "SUPER_ADMIN", "SALES_EMPLOYEE").contains(newRole)) {
             return ResponseEntity.ok(Map.of("success", false, "message", "Invalid role"));
         }
 
@@ -151,6 +154,8 @@ public class AdminController {
         }
 
         targetUser.setRole(newRole);
+        // Update is_employee flag based on role
+        targetUser.setIsEmployee("SALES_EMPLOYEE".equals(newRole) || "ADMIN".equals(newRole) || "SUPER_ADMIN".equals(newRole));
         userRepository.save(targetUser);
 
         return ResponseEntity.ok(Map.of(

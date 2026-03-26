@@ -1,3 +1,4 @@
+// src/main/java/com/Shubham/carDealership/service/CarService.java
 package com.Shubham.carDealership.service;
 
 import com.Shubham.carDealership.dto.CarRequest;
@@ -7,6 +8,7 @@ import com.Shubham.carDealership.model.User;
 import com.Shubham.carDealership.repository.CarRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,6 +18,7 @@ public class CarService {
     @Autowired
     private CarRepository carRepository;
 
+    // Existing marketplace listing
     public CarResponse listCar(CarRequest request, User seller) {
         Car car = new Car();
         car.setMake(request.getMake());
@@ -31,6 +34,39 @@ public class CarService {
         car.setSellerId(seller.getId());
         car.setSellerName(seller.getUsername());
         car.setSellerEmail(seller.getEmail());
+        car.setCarSource("MARKETPLACE");
+        car.setIsCompanyOwned(false);
+        car.setCreatedAt(LocalDateTime.now());
+        car.setUpdatedAt(LocalDateTime.now());
+
+        Car savedCar = carRepository.save(car);
+        return mapToResponse(savedCar);
+    }
+
+    // New: Add dealership car
+    public CarResponse addDealershipCar(CarRequest request, User employee) {
+        Car car = new Car();
+        car.setMake(request.getMake());
+        car.setModel(request.getModel());
+        car.setYear(request.getYear());
+        car.setPrice(request.getPrice());
+        car.setMileage(request.getMileage());
+        car.setFuel(request.getFuel());
+        car.setTransmission(request.getTransmission());
+        car.setBodyType(request.getBodyType());
+        car.setDescription(request.getDescription());
+        car.setImageUrl(request.getImageUrl());
+        car.setSellerId(employee.getId());
+        car.setSellerName(employee.getUsername());
+        car.setSellerEmail(employee.getEmail());
+        car.setCarSource("DEALERSHIP");
+        car.setIsCompanyOwned(true);
+        car.setSalesEmployeeId(employee.getId());
+        car.setStockNumber(generateStockNumber());
+        car.setInspectionStatus("PENDING");
+        car.setStatus("AVAILABLE");
+        car.setCreatedAt(LocalDateTime.now());
+        car.setUpdatedAt(LocalDateTime.now());
 
         Car savedCar = carRepository.save(car);
         return mapToResponse(savedCar);
@@ -38,6 +74,18 @@ public class CarService {
 
     public List<CarResponse> getAllAvailableCars() {
         return carRepository.findByStatus("AVAILABLE").stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<CarResponse> getDealershipInventory() {
+        return carRepository.findByCarSourceAndStatus("DEALERSHIP", "AVAILABLE").stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<CarResponse> getMarketplaceListings() {
+        return carRepository.findByCarSourceAndStatus("MARKETPLACE", "AVAILABLE").stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -54,10 +102,14 @@ public class CarService {
         return mapToResponse(car);
     }
 
-    public List<CarResponse> searchCars(String make, String bodyType, String fuel, Double maxPrice) {
-        return carRepository.searchCars(make, bodyType, fuel, maxPrice).stream()
+    public List<CarResponse> searchCars(String make, String bodyType, String fuel, Double maxPrice, String carSource) {
+        return carRepository.searchCars(make, bodyType, fuel, maxPrice, carSource).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    private String generateStockNumber() {
+        return "STK-" + System.currentTimeMillis();
     }
 
     private CarResponse mapToResponse(Car car) {
@@ -78,6 +130,11 @@ public class CarService {
         response.setSellerEmail(car.getSellerEmail());
         response.setStatus(car.getStatus());
         response.setCreatedAt(car.getCreatedAt());
+        // New fields
+        response.setCarSource(car.getCarSource());
+        response.setStockNumber(car.getStockNumber());
+        response.setIsCompanyOwned(car.getIsCompanyOwned());
+        response.setInspectionStatus(car.getInspectionStatus());
         return response;
     }
 }

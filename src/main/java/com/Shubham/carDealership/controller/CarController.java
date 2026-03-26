@@ -1,3 +1,4 @@
+// src/main/java/com/Shubham/carDealership/controller/CarController.java
 package com.Shubham.carDealership.controller;
 
 import com.Shubham.carDealership.config.JwtUtil;
@@ -16,7 +17,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/cars")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
 public class CarController {
 
     @Autowired
@@ -32,12 +33,15 @@ public class CarController {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            Long userId = jwtUtil.extractUserId(token);
-            return userRepository.findById(userId).orElse(null);
+            if (jwtUtil.validateToken(token)) {
+                Long userId = jwtUtil.extractUserId(token);
+                return userRepository.findById(userId).orElse(null);
+            }
         }
         return null;
     }
 
+    // Existing marketplace listing
     @PostMapping("/list")
     public ResponseEntity<?> listCar(@RequestBody CarRequest request, HttpServletRequest httpRequest) {
         User user = getAuthenticatedUser(httpRequest);
@@ -55,12 +59,72 @@ public class CarController {
         return ResponseEntity.ok(response);
     }
 
+    // New: Add dealership car (for sales employees)
+    @PostMapping("/dealership/add")
+    public ResponseEntity<?> addDealershipCar(@RequestBody CarRequest request, HttpServletRequest httpRequest) {
+        User user = getAuthenticatedUser(httpRequest);
+
+        if (user == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Please login first");
+            return ResponseEntity.ok(response);
+        }
+
+        // Check if user is employee or admin
+        boolean isEmployeeOrAdmin = (user.getIsEmployee() != null && user.getIsEmployee()) ||
+                "ADMIN".equals(user.getRole()) ||
+                "SUPER_ADMIN".equals(user.getRole()) ||
+                "SALES_EMPLOYEE".equals(user.getRole());
+
+        if (!isEmployeeOrAdmin) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Only sales employees can add dealership cars");
+            return ResponseEntity.ok(response);
+        }
+
+        try {
+            CarResponse car = carService.addDealershipCar(request, user);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("car", car);
+            response.put("message", "Dealership car added successfully");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to add dealership car: " + e.getMessage());
+            return ResponseEntity.ok(response);
+        }
+    }
+
     @GetMapping("/all")
     public ResponseEntity<?> getAllCars() {
         List<CarResponse> cars = carService.getAllAvailableCars();
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("cars", cars);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/dealership/inventory")
+    public ResponseEntity<?> getDealershipInventory() {
+        List<CarResponse> cars = carService.getDealershipInventory();
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("cars", cars);
+        response.put("source", "DEALERSHIP");
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/marketplace/listings")
+    public ResponseEntity<?> getMarketplaceListings() {
+        List<CarResponse> cars = carService.getMarketplaceListings();
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("cars", cars);
+        response.put("source", "MARKETPLACE");
         return ResponseEntity.ok(response);
     }
 
@@ -102,9 +166,10 @@ public class CarController {
             @RequestParam(required = false) String make,
             @RequestParam(required = false) String bodyType,
             @RequestParam(required = false) String fuel,
-            @RequestParam(required = false) Double maxPrice) {
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) String carSource) {
 
-        List<CarResponse> cars = carService.searchCars(make, bodyType, fuel, maxPrice);
+        List<CarResponse> cars = carService.searchCars(make, bodyType, fuel, maxPrice, carSource);
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("cars", cars);

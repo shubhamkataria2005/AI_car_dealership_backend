@@ -4,13 +4,16 @@ package com.Shubham.carDealership.controller;
 import com.Shubham.carDealership.config.JwtUtil;
 import com.Shubham.carDealership.dto.CarRequest;
 import com.Shubham.carDealership.dto.CarResponse;
+import com.Shubham.carDealership.model.Car;
 import com.Shubham.carDealership.model.User;
+import com.Shubham.carDealership.repository.CarRepository;
 import com.Shubham.carDealership.repository.UserRepository;
 import com.Shubham.carDealership.service.CarService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +25,9 @@ public class CarController {
 
     @Autowired
     private CarService carService;
+
+    @Autowired
+    private CarRepository carRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -39,6 +45,10 @@ public class CarController {
             }
         }
         return null;
+    }
+
+    private boolean isAdmin(User user) {
+        return user != null && ("ADMIN".equals(user.getRole()) || "SUPER_ADMIN".equals(user.getRole()));
     }
 
     // Existing marketplace listing
@@ -59,7 +69,7 @@ public class CarController {
         return ResponseEntity.ok(response);
     }
 
-    // New: Add dealership car (for sales employees)
+    // Add dealership car (for sales employees)
     @PostMapping("/dealership/add")
     public ResponseEntity<?> addDealershipCar(@RequestBody CarRequest request, HttpServletRequest httpRequest) {
         User user = getAuthenticatedUser(httpRequest);
@@ -72,10 +82,10 @@ public class CarController {
         }
 
         // Check if user is employee or admin
-        boolean isEmployeeOrAdmin = (user.getIsEmployee() != null && user.getIsEmployee()) ||
+        boolean isEmployeeOrAdmin = "SALES_EMPLOYEE".equals(user.getRole()) ||
                 "ADMIN".equals(user.getRole()) ||
                 "SUPER_ADMIN".equals(user.getRole()) ||
-                "SALES_EMPLOYEE".equals(user.getRole());
+                (user.getIsEmployee() != null && user.getIsEmployee());
 
         if (!isEmployeeOrAdmin) {
             Map<String, Object> response = new HashMap<>();
@@ -97,6 +107,34 @@ public class CarController {
             response.put("message", "Failed to add dealership car: " + e.getMessage());
             return ResponseEntity.ok(response);
         }
+    }
+
+    // Update inspection status (Admin only)
+    @PutMapping("/admin/cars/{carId}/inspection")
+    public ResponseEntity<?> updateInspectionStatus(@PathVariable Long carId,
+                                                    @RequestBody Map<String, String> payload,
+                                                    HttpServletRequest request) {
+        User admin = getAuthenticatedUser(request);
+
+        if (!isAdmin(admin)) {
+            return ResponseEntity.ok(Map.of("success", false, "message", "Admin access required"));
+        }
+
+        Car car = carRepository.findById(carId).orElse(null);
+        if (car == null) {
+            return ResponseEntity.ok(Map.of("success", false, "message", "Car not found"));
+        }
+
+        String newStatus = payload.get("inspectionStatus");
+        if (!List.of("PENDING", "PASSED", "FAILED").contains(newStatus)) {
+            return ResponseEntity.ok(Map.of("success", false, "message", "Invalid inspection status"));
+        }
+
+        car.setInspectionStatus(newStatus);
+        car.setUpdatedAt(LocalDateTime.now());
+        carRepository.save(car);
+
+        return ResponseEntity.ok(Map.of("success", true, "message", "Inspection status updated to " + newStatus));
     }
 
     @GetMapping("/all")

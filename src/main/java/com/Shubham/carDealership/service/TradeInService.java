@@ -17,39 +17,31 @@ public class TradeInService {
     @Autowired
     private TradeInRepository tradeInRepository;
 
+    @Autowired
+    private MLTradeInService mlTradeInService;
+
+    // Calculate estimated value using ML with all features
+    public BigDecimal calculateEstimatedValueFull(String make, String model, Integer year, Integer mileage, String condition,
+                                                  String bodyType, String fuelType, String transmission, Integer owners, Double engineSize) {
+        return mlTradeInService.predictValue(
+                make, model, year, mileage, condition,
+                bodyType, fuelType, transmission, owners, engineSize
+        );
+    }
+
+    // Simple estimate (for backward compatibility)
     public BigDecimal calculateEstimatedValue(String make, String model, Integer year, Integer mileage, String condition) {
-        Map<String, Double> brandMultipliers = new HashMap<>();
-        brandMultipliers.put("Toyota", 0.85);
-        brandMultipliers.put("Honda", 0.82);
-        brandMultipliers.put("Ford", 0.75);
-        brandMultipliers.put("BMW", 0.70);
-        brandMultipliers.put("Mercedes", 0.72);
-        brandMultipliers.put("Audi", 0.71);
-        brandMultipliers.put("Lamborghini", 0.85);
-        brandMultipliers.put("Ferrari", 0.88);
-        brandMultipliers.put("Rolls-Royce", 0.80);
-        brandMultipliers.put("Bentley", 0.78);
-        brandMultipliers.put("Bugatti", 0.75);
-        brandMultipliers.put("Pagani", 0.82);
+        // Default values for missing features
+        String bodyType = "Sedan";
+        String fuelType = "Petrol";
+        String transmission = "Automatic";
+        int owners = 1;
+        double engineSize = 2.0;
 
-        Map<String, Double> conditionMultipliers = new HashMap<>();
-        conditionMultipliers.put("EXCELLENT", 1.0);
-        conditionMultipliers.put("GOOD", 0.85);
-        conditionMultipliers.put("FAIR", 0.70);
-        conditionMultipliers.put("POOR", 0.50);
-
-        double brandMulti = brandMultipliers.getOrDefault(make, 0.65);
-        double conditionMulti = conditionMultipliers.getOrDefault(condition, 0.70);
-
-        int age = LocalDateTime.now().getYear() - year;
-        double ageDepreciation = Math.max(0.3, 1.0 - (age * 0.10));
-
-        double estimatedValue = 30000 * brandMulti * ageDepreciation * conditionMulti;
-        double mileageAdjustment = Math.max(0.6, 1.0 - (mileage / 200000.0));
-        estimatedValue = estimatedValue * mileageAdjustment;
-        estimatedValue = Math.max(estimatedValue, 1000);
-
-        return BigDecimal.valueOf(Math.round(estimatedValue / 100) * 100);
+        return mlTradeInService.predictValue(
+                make, model, year, mileage, condition,
+                bodyType, fuelType, transmission, owners, engineSize
+        );
     }
 
     public boolean regoExists(String rego) {
@@ -66,6 +58,9 @@ public class TradeInService {
             throw new RuntimeException("A trade-in request for this vehicle (Rego: " + rego + ") already exists.");
         }
 
+        // Calculate estimated value using ML
+        BigDecimal estimatedValue = calculateEstimatedValue(make, model, year, mileage, condition);
+
         TradeIn tradeIn = new TradeIn();
         tradeIn.setUserId(userId);
         tradeIn.setCarId(carId);
@@ -76,7 +71,7 @@ public class TradeInService {
         tradeIn.setTradeMileage(mileage);
         tradeIn.setTradeCondition(condition);
         tradeIn.setNotes(notes);
-        tradeIn.setEstimatedValue(calculateEstimatedValue(make, model, year, mileage, condition));
+        tradeIn.setEstimatedValue(estimatedValue);
         tradeIn.setStatus("PENDING");
         tradeIn.setCreatedAt(LocalDateTime.now());
         tradeIn.setUpdatedAt(LocalDateTime.now());

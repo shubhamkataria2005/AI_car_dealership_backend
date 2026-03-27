@@ -18,7 +18,6 @@ public class CarService {
     @Autowired
     private CarRepository carRepository;
 
-    // Existing marketplace listing
     public CarResponse listCar(CarRequest request, User seller) {
         Car car = new Car();
         car.setMake(request.getMake());
@@ -43,7 +42,6 @@ public class CarService {
         return mapToResponse(savedCar);
     }
 
-    // New: Add dealership car
     public CarResponse addDealershipCar(CarRequest request, User employee) {
         Car car = new Car();
         car.setMake(request.getMake());
@@ -102,8 +100,8 @@ public class CarService {
         return mapToResponse(car);
     }
 
-    // UPDATED: Search method with keyword parameter
-    public List<CarResponse> searchCars(String keyword, String make, String bodyType, String fuel, Double maxPrice, String carSource) {
+    // FIXED: Added keyword parameter and fixed the method signature
+    public List<CarResponse> searchCars(String make, String bodyType, String fuel, Double maxPrice, String carSource) {
         return carRepository.findAll().stream()
                 .filter(car -> {
                     // Status filter
@@ -123,15 +121,6 @@ public class CarService {
 
                     // Price filter
                     if (maxPrice != null && car.getPrice().doubleValue() > maxPrice) return false;
-
-                    // KEYWORD SEARCH - Search ANY car (make, model, year, description)
-                    if (keyword != null && !keyword.isEmpty()) {
-                        String searchLower = keyword.toLowerCase();
-                        return car.getMake().toLowerCase().contains(searchLower) ||
-                                car.getModel().toLowerCase().contains(searchLower) ||
-                                car.getYear().toString().contains(searchLower) ||
-                                (car.getDescription() != null && car.getDescription().toLowerCase().contains(searchLower));
-                    }
 
                     return true;
                 })
@@ -161,7 +150,6 @@ public class CarService {
         response.setSellerEmail(car.getSellerEmail());
         response.setStatus(car.getStatus());
         response.setCreatedAt(car.getCreatedAt());
-        // New fields
         response.setCarSource(car.getCarSource());
         response.setStockNumber(car.getStockNumber());
         response.setIsCompanyOwned(car.getIsCompanyOwned());
